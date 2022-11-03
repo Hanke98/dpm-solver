@@ -2,7 +2,7 @@
 
 import torch
 
-from .solver import NoiseScheduleVP, model_wrapper, DPM_Solver
+from .dpm_solver import NoiseScheduleVP, model_wrapper, DPM_Solver
 
 
 class DPMSolverSampler(object):
@@ -40,6 +40,7 @@ class DPMSolverSampler(object):
                log_every_t=100,
                unconditional_guidance_scale=1.,
                unconditional_conditioning=None,
+               backward_euler=False,
                # this has to come in the same format as the conditioning, # e.g. as encoded tokens, ...
                **kwargs
                ):
@@ -77,6 +78,6 @@ class DPMSolverSampler(object):
         )
 
         dpm_solver = DPM_Solver(model_fn, ns, predict_x0=True, thresholding=False)
-        x = dpm_solver.sample(img, steps=S, skip_type="time_uniform", method="multistep", order=2)
+        x = dpm_solver.sample(img, steps=S, skip_type="time_uniform", method="multistep", order=1, backward_euler=backward_euler)
 
         return x.to(device), None

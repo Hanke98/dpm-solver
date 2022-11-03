@@ -478,7 +478,6 @@ class DPM_Solver:
                 orders = [3,] * (K - 1) + [2]
         elif order == 2:
             if steps % 2 == 0:
-                K = steps // 2
                 orders = [2,] * K
             else:
                 K = steps // 2 + 1
@@ -501,7 +500,7 @@ class DPM_Solver:
         """
         return self.data_prediction_fn(x, s)
 
-    def dpm_solver_first_update(self, x, s, t, model_s=None, return_intermediate=False):
+    def dpm_solver_first_update(self, x, s, t, model_s=None, return_intermediate=False, backward_euler=False):
         """
         DPM-Solver-1 (equivalent to DDIM) from time `s` to time `t`.
 
@@ -531,6 +530,12 @@ class DPM_Solver:
                 expand_dims(sigma_t / sigma_s, dims) * x
                 - expand_dims(alpha_t * phi_1, dims) * model_s
             )
+            if backward_euler:
+                model_t = self.model_fn(x_t, t)
+                x_t = (
+                    expand_dims(sigma_t / sigma_s, dims) * x
+                    - expand_dims(alpha_t * phi_1, dims) * model_t
+                )
             if return_intermediate:
                 return x_t, {'model_s': model_s}
             else:
@@ -882,7 +887,7 @@ class DPM_Solver:
         else:
             raise ValueError("Solver order must be 1 or 2 or 3, got {}".format(order))
 
-    def multistep_dpm_solver_update(self, x, model_prev_list, t_prev_list, t, order, solver_type='dpm_solver'):
+    def multistep_dpm_solver_update(self, x, model_prev_list, t_prev_list, t, order, solver_type='dpm_solver', backward_euler=False):
         """
         Multistep DPM-Solver with the order `order` from time `t_prev_list[-1]` to time `t`.
 
@@ -898,7 +903,7 @@ class DPM_Solver:
             x_t: A pytorch tensor. The approximated solution at time `t`.
         """
         if order == 1:
-            return self.dpm_solver_first_update(x, t_prev_list[-1], t, model_s=model_prev_list[-1])
+            return self.dpm_solver_first_update(x, t_prev_list[-1], t, model_s=model_prev_list[-1], backward_euler=backward_euler)
         elif order == 2:
             return self.multistep_dpm_solver_second_update(x, model_prev_list, t_prev_list, t, solver_type=solver_type)
         elif order == 3:
@@ -1071,23 +1076,36 @@ class DPM_Solver:
                 vec_t = timesteps[0].expand((x.shape[0]))
                 model_prev_list = [self.model_fn(x, vec_t)]
                 t_prev_list = [vec_t]
+                ######################################################################
+                # origin code
                 # Init the first `order` values by lower order multistep DPM-Solver.
-                for init_order in range(1, order):
-                    vec_t = timesteps[init_order].expand(x.shape[0])
-                    x = self.multistep_dpm_solver_update(x, model_prev_list, t_prev_list, vec_t, init_order, solver_type=solver_type)
-                    model_prev_list.append(self.model_fn(x, vec_t))
-                    t_prev_list.append(vec_t)
-                # Compute the remaining values by `order`-th order multistep DPM-Solver.
+                # for init_order in range(1, order):
+                #     vec_t = timesteps[init_order].expand(x.shape[0])
+                #     x = self.multistep_dpm_solver_update(x, model_prev_list, t_prev_list, vec_t, init_order, solver_type=solver_type)
+                #     model_prev_list.append(self.model_fn(x, vec_t))
+                #     t_prev_list.append(vec_t)
+                # # Compute the remaining values by `order`-th order multistep DPM-Solver.
+                # for step in range(order, steps + 1):
+                #     vec_t = timesteps[step].expand(x.shape[0])
+                #     x = self.multistep_dpm_solver_update(x, model_prev_list, t_prev_list, vec_t, order, solver_type=solver_type)
+                #     for i in range(order - 1):
+                #         t_prev_list[i] = t_prev_list[i + 1]
+                #         model_prev_list[i] = model_prev_list[i + 1]
+                #     t_prev_list[-1] = vec_t
+                #     # We do not need to evaluate the final model value.
+                #     if step < steps:
+                #         model_prev_list[-1] = self.model_fn(x, vec_t)
+                ######################################################################
+                # Jiafeng's simplification on 1-order
                 for step in range(order, steps + 1):
                     vec_t = timesteps[step].expand(x.shape[0])
                     x = self.multistep_dpm_solver_update(x, model_prev_list, t_prev_list, vec_t, order, solver_type=solver_type)
-                    for i in range(order - 1):
-                        t_prev_list[i] = t_prev_list[i + 1]
-                        model_prev_list[i] = model_prev_list[i + 1]
                     t_prev_list[-1] = vec_t
-                    # We do not need to evaluate the final model value.
                     if step < steps:
                         model_prev_list[-1] = self.model_fn(x, vec_t)
+                ######################################################################
+
+                # Init the first `order` values by lower order multistep DPM-Solver.
         elif method in ['singlestep', 'singlestep_fixed']:
             if method == 'singlestep':
                 timesteps_outer, orders = self.get_orders_and_timesteps_for_singlestep_solver(steps=steps, order=order, skip_type=skip_type, t_T=t_T, t_0=t_0, device=device)

@@ -1,0 +1,8 @@
+*/__pycache__/*
+*.pyc
+example_v2/stable-diffusion/latent_diffusion.egg-info
+example_v2/stable-diffusion/src/clip/*
+example_v2/stable-diffusion/src/taming-transformers/*
+*.gz
+stdout.txt
+events.out*
