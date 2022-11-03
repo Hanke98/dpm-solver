@@ -16,6 +16,20 @@ DPM-Solver (and the improved version DPM-Solver++) is a fast dedicated high-orde
 
 <br />
 
+# Jiafeng:
+
+### Reproduce the backward experiments:
+1. Set up the envoronment of `expample_v2` according to its [readm me](example_v2/stable-diffusion/README.md).
+2. try the following cmd:
+```
+# with backward euler on
+python scripts/txt2img.py --prompt "a photograph of an astronaut reading a book" --dpm_solver --ddim_steps 10 --backward-euler
+
+# with backward euler off
+python scripts/txt2img.py --prompt "a photograph of an astronaut reading a book" --dpm_solver --ddim_steps 10 
+```
+
+
 # News
 - **2022-10-26**. We have updated the **DPM-Solver v2.0**, a more stable version for high-resolutional image synthesis tasks. We have the following upgrades:
     - We support the discrete-time DPMs by implementing a picewise linear interpolation of $\log\alpha_t$ for the `NoiseScheduleVP`.
