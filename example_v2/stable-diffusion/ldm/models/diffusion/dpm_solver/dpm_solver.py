@@ -969,7 +969,7 @@ class DPM_Solver:
 
     def sample(self, x, steps=20, t_start=None, t_end=None, order=3, skip_type='time_uniform',
         method='singlestep', denoise=False, solver_type='dpm_solver', atol=0.0078,
-        rtol=0.05,
+        rtol=0.05, backward_euler=False
     ):
         """
         Compute the sample at time `t_end` by DPM-Solver, given the initial `x` at time `t_start`.
@@ -1099,7 +1099,7 @@ class DPM_Solver:
                 # Jiafeng's simplification on 1-order
                 for step in range(order, steps + 1):
                     vec_t = timesteps[step].expand(x.shape[0])
-                    x = self.multistep_dpm_solver_update(x, model_prev_list, t_prev_list, vec_t, order, solver_type=solver_type)
+                    x = self.multistep_dpm_solver_update(x, model_prev_list, t_prev_list, vec_t, order, solver_type=solver_type, backward_euler=backward_euler)
                     t_prev_list[-1] = vec_t
                     if step < steps:
                         model_prev_list[-1] = self.model_fn(x, vec_t)

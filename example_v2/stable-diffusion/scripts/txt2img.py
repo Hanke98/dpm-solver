@@ -113,6 +113,11 @@ def main():
         default="outputs/txt2img-samples"
     )
     parser.add_argument(
+        "--backward-euler",
+        action='store_true',
+        help="use backward euler method",
+    )
+    parser.add_argument(
         "--skip_grid",
         action='store_true',
         help="do not save a grid, only individual samples. Helpful when evaluating lots of samples",
@@ -307,6 +312,7 @@ def main():
                                                          verbose=False,
                                                          unconditional_guidance_scale=opt.scale,
                                                          unconditional_conditioning=uc,
+                                                         backward_euler=opt.backward_euler,
                                                          eta=opt.ddim_eta,
                                                          x_T=start_code)
 
